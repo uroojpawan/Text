@@ -1,0 +1,270 @@
+*&---------------------------------------------------------------------*
+*& Report  ZHR_FFREPORT
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  ZHR_FFREPORT.
+*&---------------------------------------------------------------------*
+
+" Author Salman Rauf
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+
+
+Tables : pernr .
+INFOTYPES: 0001,0002, 0003."", 9505.
+
+
+DATA : C_NAME type BUTXT, C_LOGO(10) type C.
+DATA : D_COMPANY_CODE type BUKRS VALUE '1000',
+       D_DPI type char3 value '50',
+       D_WIDTH type char3 value '30'.
+
+
+TYPE-POOLS: slis.
+DATA: fieldcat TYPE slis_t_fieldcat_alv,
+      fc_str TYPE slis_fieldcat_alv,
+      event TYPE slis_t_event,
+      event_str TYPE slis_alv_event,
+      layout   TYPE slis_layout_alv,
+      title    TYPE lvc_title,
+      repid    LIKE sy-repid.
+
+DATA: heading TYPE slis_t_listheader,
+      heading_str TYPE slis_listheader.
+
+
+
+Data: BEGIN OF ITAB OCCURS 0,
+
+EMP_NO TYPE PERNR-PERNR,
+EMPNAME TYPE PERNR-ENAME,
+"last_payroll_run type pa0003-ABRDT,
+*TERRITORYTYPE TYPE P9505-TYCODE,
+*TERRITORYCODE TYPE ZTER_CODE-TCODE,
+*TERRITORYNO TYPE P9505-TNUM,
+*TERRITORYABBR TYPE ZTER_CODE-TABBR,
+*BUSINESSGROUP TYPE P9505-BGRP,
+*BUSINESSUNITTEXT TYPE ZBUS_CODE,
+*BUSINESSUNITCODE TYPE P9505-BUCODE,
+*LOCATIONCODE TYPE P9505-LOC_CODE,
+*LOCATIONNAME TYPE ZLOCATION-LOC_NAME,
+*LOCATIONABBR TYPE ZLOCATION-LOC_ABBR,
+*BASELOCATION TYPE P9505-BASETOWN,
+*SALE TYPE P9505-SALE,
+
+end of itab.
+
+
+
+START-OF-selection.
+Get pernr.
+
+*rp_provide_from_last p9505 space pn-begda pn-endda.
+
+ITAB-EMP_NO = pernr-pernr.
+ITAB-EMPNAME = pernr-ename.
+"ITAB-last_payroll_run = p0003-ABRDT.
+*ITAB-TERRITORYTYPE = P9505-TYCODE.
+" ITAB-TERRITORYCODE = ZTER_CODE-TCODE.
+"select single tcode from zter_code into itab-TERRITORYCODE
+ " WHERE tnum = p9505-tnum and tycode = p9505-tycode.
+
+*  select single * from zter_code
+*  WHERE tnum = p9505-tnum and tycode = p9505-tycode.
+*    if sy-subrc = 0.
+*      ITAB-TERRITORYCODE = ZTER_CODE-TCODE.
+*      ITAB-TERRITORYABBR = ZTER_CODE-TABBR.
+*endif.
+
+
+* select single * from zlocation
+*
+*  WHERE loc_code = p9505-loc_code and loc_code = p9505-loc_code.
+*    if sy-subrc = 0.
+*      ITAB-LOCATIONCODE = Zlocation-loc_code.
+*      ITAB-TERRITORYABBR = ZTER_CODE-TABBR.
+*endif.
+*
+*
+* select single * from zbus_code
+*
+*  WHERE bgrp = p9505-bgrp and bgrp = p9505-bgrp.
+*    if sy-subrc = 0.
+*      ITAB-BUSINESSUNITTEXT = Zbus_code-butext.
+*      ITAB-TERRITORYABBR = ZTER_CODE-TABBR.
+*endif.
+*
+*
+*ITAB-TERRITORYNO = P9505-TNUM.
+*"ITAB-TERRITORYABBR = ZTER_CODE-TABBR.
+*ITAB-BUSINESSGROUP = P9505-BGRP.
+*"ITAB-BUSINESSUNITTEXT = ZBUS_CODE.
+*ITAB-BUSINESSUNITCODE = P9505-BUCODE.
+*"ITAB-LOCATIONCODE = P9505-LOC_CODE.
+*ITAB-LOCATIONNAME = ZLOCATION-LOC_NAME.
+*ITAB-LOCATIONABBR = ZLOCATION-LOC_ABBR.
+*ITAB-BASELOCATION = P9505-BASETOWN.
+*ITAB-SALE = P9505-SALE.
+
+append ITAB.
+end-of-selection.
+
+PERFORM draw_alv.
+PERFORM fill_alv.
+
+
+
+FORM draw_alv .
+
+  CALL FUNCTION 'REUSE_ALV_EVENTS_GET'
+    EXPORTING
+      i_list_type = 0
+    IMPORTING
+      et_events   = event[].
+
+  READ TABLE event WITH KEY name = 'TOP_OF_PAGE'
+     INTO event_str.
+
+  IF sy-subrc = 0.
+    MOVE: 'TOP_OF_PAGE' TO event_str-form.
+    APPEND event_str TO event.
+  ENDIF.
+
+*  READ TABLE event WITH KEY name = 'END_OF_LIST'
+*       INTO event_str.
+*
+*  IF sy-subrc = 0.
+*    MOVE: 'END_OF_LIST' TO event_str-form.
+*    APPEND event_str TO event.
+*
+*  ENDIF.
+ENDFORM.                    "DRAW_ALV
+
+
+
+FORM top_of_page.
+CALL FUNCTION 'REUSE_ALV_COMMENTARY_WRITE'
+EXPORTING
+it_list_commentary = heading.
+* i_logo             = C_LOGO.
+
+ENDFORM.
+
+
+
+
+
+FORM fill_alv .
+
+  heading_str-typ = 'H'. " main heading.
+ heading_str-info = 'Field Force Territory Details'.
+
+  APPEND heading_str TO heading.
+
+
+
+  fc_str-tabname = 'ITAB'.
+  fc_str-fieldname = 'EMP_NO'.
+  fc_str-seltext_m = 'Employee No'.
+  APPEND fc_str TO fieldcat.
+
+
+  fc_str-tabname = 'ITAB'.
+  fc_str-fieldname = 'EMPNAME'.
+  fc_str-seltext_m = 'Employee Name'.
+  APPEND fc_str TO fieldcat.
+
+  "fc_str-tabname = 'ITAB'.
+  "fc_str-fieldname = 'LAST_PAYROLL_RUN'.
+  "fc_str-seltext_m = 'Payroll Date'.
+  "APPEND fc_str TO fieldcat.
+
+* fc_str-tabname = 'ITAB'.
+*  fc_str-fieldname = 'TERRITORYTYPE'.
+*  fc_str-seltext_m = 'Territory Type'.
+*  APPEND fc_str TO fieldcat.
+*
+*   fc_str-tabname = 'ITAB'.
+*  fc_str-fieldname = 'TERRITORYCODE'.
+*  fc_str-seltext_m = 'Territory Code'.
+*  APPEND fc_str TO fieldcat.
+*
+*   fc_str-tabname = 'ITAB'.
+*  fc_str-fieldname = 'TERRITORYNO'.
+*  fc_str-seltext_m = 'Territory Number'.
+*  APPEND fc_str TO fieldcat.
+*
+*   fc_str-tabname = 'ITAB'.
+*  fc_str-fieldname = 'TERRITORYABBR'.
+*  fc_str-seltext_m = 'Territory Abbr.'.
+*  APPEND fc_str TO fieldcat.
+*
+*   fc_str-tabname = 'ITAB'.
+*  fc_str-fieldname = 'BUSINESSGROUP'.
+*  fc_str-seltext_m = 'Business Group'.
+*  APPEND fc_str TO fieldcat.
+*
+*   fc_str-tabname = 'ITAB'.
+*  fc_str-fieldname = 'BUSINESSUNITTEXT'.
+*  fc_str-seltext_m = 'Business Unit Text'.
+*  APPEND fc_str TO fieldcat.
+*
+*   fc_str-tabname = 'ITAB'.
+*  fc_str-fieldname = 'BUSINESSUNITCODE'.
+*  fc_str-seltext_m = 'Business Unit Code'.
+*  APPEND fc_str TO fieldcat.
+*
+*   fc_str-tabname = 'ITAB'.
+*  fc_str-fieldname = 'LOCATIONCODE'.
+*  fc_str-seltext_m = 'Location Code'.
+*  APPEND fc_str TO fieldcat.
+*
+*   fc_str-tabname = 'ITAB'.
+*  fc_str-fieldname = 'LOCATIONNAME'.
+*  fc_str-seltext_m = 'Location Name'.
+*  APPEND fc_str TO fieldcat.
+*
+*   fc_str-tabname = 'ITAB'.
+*  fc_str-fieldname = 'LOCATIONABBR'.
+*  fc_str-seltext_m = 'Location Abbr.'.
+*  APPEND fc_str TO fieldcat.
+*
+*   fc_str-tabname = 'ITAB'.
+*  fc_str-fieldname = 'BASELOCATION'.
+*  fc_str-seltext_m = 'Base Location'.
+*  APPEND fc_str TO fieldcat.
+*
+*   fc_str-tabname = 'ITAB'.
+*  fc_str-fieldname = 'SALE'.
+*  fc_str-seltext_m = 'Sale'.
+*  APPEND fc_str TO fieldcat.
+
+  layout-zebra = ''.
+  layout-colwidth_optimize = 'X'.
+
+
+
+
+ CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+      i_interface_check  = 'X '
+      i_callback_program = sy-cprog
+      is_layout          = layout
+      it_fieldcat        = fieldcat[]
+      it_events          = event[]
+      i_save             = 'X'
+    TABLES
+      t_outtab           = ITAB.
+
+
+
+
+ENDFORM.
